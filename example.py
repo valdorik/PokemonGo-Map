@@ -442,7 +442,8 @@ def get_args():
     parser.add_argument('-p', '--password', help='Password', required=False)
     parser.add_argument(
         '-l', '--location', type=parse_unicode, help='Location', required=True)
-    parser.add_argument('-st', '--step-limit', help='Steps', required=True)
+    parser.add_argument('-st', '--step-limit', help='Steps', required=False,
+    default=3)
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument(
         '-i', '--ignore', help='Comma-separated list of Pokémon names or IDs to ignore')
@@ -452,7 +453,9 @@ def get_args():
         "-ar",
         "--auto_refresh",
         help="Enables an autorefresh that behaves the same as a page reload. " +
-             "Needs an integer value for the amount of seconds")
+             "Needs an integer value for the amount of seconds",
+        default=5,
+    )
     parser.add_argument(
         '-dp',
         '--display-pokestop',
@@ -622,8 +625,6 @@ def main():
         set_location_coords(NEXT_LAT, NEXT_LONG, 0)
         NEXT_LAT = 0
         NEXT_LONG = 0
-    else:
-        set_location_coords(origin_lat, origin_lon, 0)
 
     register_background_thread()
 
@@ -753,7 +754,6 @@ def register_background_thread(initial_registration=False):
 
 def create_app():
     app = Flask(__name__, template_folder='templates')
-
     GoogleMaps(app, key=GOOGLEMAPS_KEY)
     return app
 
@@ -794,7 +794,7 @@ def fullmap():
 
 @app.route('/next_loc')
 def next_loc():
-    global NEXT_LAT, NEXT_LONG
+    global origin_lat, origin_lon
 
     lat = flask.request.args.get('lat', '')
     lon = flask.request.args.get('lon', '')
@@ -802,8 +802,8 @@ def next_loc():
         print('[-] Invalid next location: %s,%s' % (lat, lon))
     else:
         print('[+] Saved next location as %s,%s' % (lat, lon))
-        NEXT_LAT = float(lat)
-        NEXT_LONG = float(lon)
+        origin_lat = float(lat)
+        origin_lon = float(lon)
         return 'ok'
 
 
@@ -815,8 +815,17 @@ def get_pokemarkers():
         'infobox': "Start position",
         'type': 'custom',
         'key': 'start-position',
-        'disappear_time': -1
+        'disappear_time': -1,
     }]
+    pokeMarkers.append({
+        'icon': icons.dots.blue,
+        'lat': FLOAT_LAT,
+        'lng': FLOAT_LONG,
+        'infobox': "Search Location",
+        'type': 'custom',
+        'key': 'search-location',
+        'disappear_time': -1,
+    })
 
     for pokemon_key in pokemons:
         pokemon = pokemons[pokemon_key]
@@ -901,7 +910,6 @@ def get_map():
         markers=get_pokemarkers(),
         zoom='15', )
     return fullmap
-
 
 if __name__ == '__main__':
     args = get_args()

@@ -21,6 +21,7 @@
   <!-- <script async defer src="https://maps.googleapis.com/maps/api/js?key={{ key }}"></script> -->
 
   <script type="text/javascript">
+    
     var setLabelTime = function(){
         $('.label-countdown').each(function (index, element) {
             var disappearsAt = new Date(parseInt(element.getAttribute("disappears-at"))*1000);
@@ -61,14 +62,29 @@
         var markerCache = {};
         // Adds a marker to the map and push to the array.
         function addMarker(options = {}) {
+            //console.log(options);
             var default_options = {map: map}
             for(var prop in options){
                 if(options.hasOwnProperty(prop)){
                     default_options[prop] = options[prop];
                 }
             }
-            var marker = new google.maps.Marker(default_options);
+
+            if (default_options.key == 'start-position') {
+                default_options['draggable'] = true;
+                var marker = new google.maps.Marker(default_options);
+                google.maps.event.addListener(marker, 'dragend', function() {
+                    var marker_pos = marker.getPosition();
+                    var lat = marker_pos.lat();
+                    var lng = marker_pos.lng();
+                    $.get(baseURL + "/next_loc", {'lat': lat, 'lon': lng});
+                });
+            } else {
+                var marker = new google.maps.Marker(default_options);
+            }
+            
             markers.push(marker);
+
             return marker;
         }
 
@@ -190,6 +206,7 @@
                             position: new google.maps.LatLng(item["lat"], item["lng"]),
                             map: map,
                             icon: item["icon"],
+                            key: item["key"],
                         });
                     markerCache[key] = {item: item, marker: marker};
 
